@@ -1768,7 +1768,7 @@ img.project-card {
 
 .pcard-title {
   display: inline;
-  font-size: clamp(1.5rem, 1.1rem + 1.2vw, 2rem);
+  font-size: clamp(1.1rem, 0.9rem + 0.8vw, 1.5rem);
   line-height: 1.2;
   letter-spacing: -0.02em;
   background: linear-gradient(currentColor, currentColor) left bottom / 0 2px
@@ -2677,6 +2677,23 @@ img.project-card {
   to {
     transform: scale(1);
   }
+}
+
+.btn-ghost {
+  padding: 0.5rem 1rem;
+  border: 0;
+  background: none;
+  color: rgba(245, 245, 245, 0.6);
+  font: inherit;
+  font-size: 0.9rem;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  cursor: pointer;
+  transition: color 0.25s ease;
+}
+
+.btn-ghost:hover {
+  color: var(--col-orange-ff5a1);
 }
 
 /* Footer */

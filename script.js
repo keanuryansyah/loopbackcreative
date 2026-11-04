@@ -311,10 +311,10 @@
 
   /* ========== CONTACT ========== */
   {
-    const FORM_ENDPOINT = ""; // isi URL Formspree / Getform / API kamu; kosong = simulasi saja
-    const STUDIO_TZ = "Asia/Jakarta"; // zona waktu studio untuk jam & status online
-    const OPEN_HOUR = 9;
-    const CLOSE_HOUR = 18;
+    const WA_NUMBER = "6289615510333";
+    const STUDIO_TZ = "Asia/Jakarta"; // zona waktu studio
+    const OFFLINE_FROM = 0; // offline mulai 00:00
+    const OFFLINE_UNTIL = 5; // sampai 05:00 (selebihnya online)
 
     /* Jam + status studio */
     const statusBox = document.getElementById("studioStatus");
@@ -325,24 +325,24 @@
       const timeFmt = new Intl.DateTimeFormat("en-GB", {
         hour: "2-digit",
         minute: "2-digit",
-        hour12: false,
+        hourCycle: "h23",
         timeZone: STUDIO_TZ,
       });
       const hourFmt = new Intl.DateTimeFormat("en-GB", {
         hour: "2-digit",
-        hour12: false,
+        hourCycle: "h23",
         timeZone: STUDIO_TZ,
       });
 
       const tick = () => {
         const now = new Date();
         const hour = Number(hourFmt.format(now));
-        const open = hour >= OPEN_HOUR && hour < CLOSE_HOUR;
+        const offline = hour >= OFFLINE_FROM && hour < OFFLINE_UNTIL;
         timeEl.textContent = timeFmt.format(now);
-        statusText.textContent = open
-          ? "We're online now"
-          : "Offline, we'll reply in the morning";
-        statusBox.classList.toggle("is-off", !open);
+        statusText.textContent = offline
+          ? "Offline, we'll reply in the morning"
+          : "We're online now";
+        statusBox.classList.toggle("is-off", offline);
       };
 
       tick();
@@ -380,12 +380,12 @@
       });
     }
 
-    /* Form */
+    /* Form -> WhatsApp */
     const form = document.getElementById("contactForm");
     const success = document.getElementById("formSuccess");
     const formError = document.getElementById("formError");
-    const sendBtn = document.getElementById("sendBtn");
     const resetBtn = document.getElementById("formReset");
+    const waAgain = document.getElementById("waAgain");
     const fName = document.getElementById("cName");
     const fEmail = document.getElementById("cEmail");
     const fMsg = document.getElementById("cMsg");
@@ -428,63 +428,59 @@
         return !firstBad;
       };
 
+      const buildWaUrl = () => {
+        const services = [
+          ...form.querySelectorAll('input[name="service"]:checked'),
+        ].map((i) => i.value);
+        const budget =
+          form.querySelector('input[name="budget"]:checked')?.value || "";
+
+        const lines = [
+          "Hi Loopback Creative, I'd like to talk about a project.",
+          "",
+          `Name: ${fName.value.trim()}`,
+          `Email: ${fEmail.value.trim()}`,
+        ];
+        if (services.length) lines.push(`Needs: ${services.join(", ")}`);
+        if (budget) lines.push(`Budget: ${budget}`);
+        lines.push("", "About the project:", fMsg.value.trim());
+
+        return `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(lines.join("\n"))}`;
+      };
+
       [fName, fEmail, fMsg].forEach((input) =>
         input.addEventListener("input", () => setErr(input, "")),
       );
       fMsg.addEventListener("input", updateCount);
 
-      form.addEventListener("submit", async (e) => {
+      form.addEventListener("submit", (e) => {
         e.preventDefault();
         formError.hidden = true;
         if (!validate()) return;
 
-        const payload = {
-          name: fName.value.trim(),
-          email: fEmail.value.trim(),
-          services: [
-            ...form.querySelectorAll('input[name="service"]:checked'),
-          ].map((i) => i.value),
-          budget:
-            form.querySelector('input[name="budget"]:checked')?.value || "",
-          message: fMsg.value.trim(),
-        };
-
-        sendBtn.disabled = true;
-        sendBtn.classList.add("is-loading");
-        sendBtn.querySelector(".btn-send-label").textContent = "Sending…";
-
-        try {
-          if (FORM_ENDPOINT) {
-            const res = await fetch(FORM_ENDPOINT, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Accept: "application/json",
-              },
-              body: JSON.stringify(payload),
-            });
-            if (!res.ok) throw new Error("Request failed");
-          } else {
-            await new Promise((r) => setTimeout(r, 900)); // simulasi
-          }
-
-          form.reset();
-          updateCount();
-          form.hidden = true;
-          success.hidden = false;
-        } catch {
+        if (!/^\d{8,15}$/.test(WA_NUMBER)) {
+          console.warn("WA_NUMBER belum diisi dengan benar di script.js");
           formError.hidden = false;
-        } finally {
-          sendBtn.disabled = false;
-          sendBtn.classList.remove("is-loading");
-          sendBtn.querySelector(".btn-send-label").textContent = "Send message";
+          return;
         }
+
+        const url = buildWaUrl();
+        waAgain.href = url;
+
+        // Dibuka langsung di dalam event klik supaya tidak diblokir popup blocker
+        const win = window.open(url, "_blank");
+        if (win) win.opener = null;
+        else window.location.href = url; // fallback kalau tab baru diblokir
+
+        // Isi form sengaja tidak di-reset supaya bisa diedit lagi
+        form.hidden = true;
+        success.hidden = false;
       });
 
       resetBtn.addEventListener("click", () => {
         success.hidden = true;
         form.hidden = false;
-        fName.focus();
+        fMsg.focus();
       });
     }
 
